@@ -19,9 +19,22 @@ const int MINIMUM_BLOCK_SIZE = 3;
 public:
     std::vector<Node*> vector; 
     Block* next; // Pointer to the next block at the same level
-    Block(Block* next){
+    Block(int value, Block* next){
+        Node* node = new Node(value,nullptr);
+        vector[0] = node;
         vector.resize(MINIMUM_BLOCK_SIZE);
         this->next = next;
+    }
+
+    void print(){
+        for (auto & it : vector){
+            std::cout << it << ",";
+        }
+        std::cout << "|";
+
+        if(next){
+            next->print();
+        }
     }
 };
 
@@ -31,9 +44,8 @@ private:
     const int NEGATIVE_INFINITY = - std::numeric_limits<int>::infinity();
 public:
     BSkipList() {
-        Block block = new Block(nullptr);
-        block.vector[0] = new Node(NEGATIVE_INFINITY, nullptr); // new Block with negative infinity
-        levels.push_back(&block);
+        Block* block = new Block(NEGATIVE_INFINITY, nullptr);
+        levels.push_back(block);
     }
 
     ~BSkipList() {
@@ -45,5 +57,15 @@ public:
     }
 
     void print(){
+        for(auto& it : levels) {
+            it->print();
+            std::cout << std::endl;
+        }
     }
 };
+
+int main(void) {
+  BSkipList list;
+  list.print();
+  return 0;
+}
