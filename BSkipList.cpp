@@ -1,7 +1,8 @@
 #include <iostream>
-#include <cstdlib>
-#include <ctime>
 #include <vector>
+#include <limits.h>
+
+class Block;
 
 class Node {
 public:
@@ -14,21 +15,23 @@ public:
 };
 
 class Block {
-private:
-const int MINIMUM_BLOCK_SIZE = 3;
 public:
     std::vector<Node*> vector; 
     Block* next; // Pointer to the next block at the same level
     Block(int value, Block* next){
         Node* node = new Node(value,nullptr);
-        vector[0] = node;
-        vector.resize(MINIMUM_BLOCK_SIZE);
+        vector.push_back(node);
+        vector.resize(3); // minimum size of each block
         this->next = next;
     }
 
     void print(){
-        for (auto & it : vector){
-            std::cout << it << ",";
+        for (unsigned int i = 0; i < vector.size(); i++){
+            if(vector[i])
+                std::cout << vector[i]->value << " ";
+            else
+                std::cout << vector[i] << " ";
+
         }
         std::cout << "|";
 
@@ -41,10 +44,9 @@ public:
 class BSkipList {
 private:
     std::vector<Block*> levels; // Vector of head blocks from each level
-    const int NEGATIVE_INFINITY = - std::numeric_limits<int>::infinity();
 public:
     BSkipList() {
-        Block* block = new Block(NEGATIVE_INFINITY, nullptr);
+        Block* block = new Block(INT_MIN, nullptr); // negative infinity block
         levels.push_back(block);
     }
 
@@ -57,15 +59,15 @@ public:
     }
 
     void print(){
-        for(auto& it : levels) {
-            it->print();
+        for(unsigned int i = 0; i < levels.size(); i++) {
+            levels[i]->print();
             std::cout << std::endl;
         }
     }
 };
 
-int main(void) {
-  BSkipList list;
-  list.print();
-  return 0;
+int main() {
+    BSkipList list;
+    list.print();
+    return 0;
 }
