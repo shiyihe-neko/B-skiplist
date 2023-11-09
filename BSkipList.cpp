@@ -20,11 +20,16 @@ class Block {
 public:
     std::vector<Node*> vector; 
     Block* next; // Pointer to the next block at the same level
-    Block(int value, Block* next){
-        Node* node = new Node(value,nullptr);
+    Block( Node* node, Block* next){
         vector.push_back(node);
         //vector.resize(3); // minimum size of each block
         this->next = next;
+    }
+
+    Block(std::vector<Node*> vector, Block* next){
+    this->vector = vector;
+    //vector.resize(3); // minimum size of each block
+    this->next = next;
     }
 
     void print(){
@@ -33,13 +38,12 @@ public:
             //     std::cout << vector[i]->value << " ";
             // else
             //     std::cout << "Null ";
-            std::cout << vector[i]->value << " ";
+            std::cout << vector[i]->value;
+            if(vector[i]->down)
+                std::cout<<"("<<vector[i]->down->vector[0]->value <<")";
+            std::cout<< " ";
         }
         std::cout << "|";
-
-        if(next){
-            next->print();
-        }
     }
 };
 
@@ -47,9 +51,9 @@ class BSkipList {
 private:
     std::vector<Block*> levels; // Vector of head blocks from each level
 public:
-    int r = 1;
+    int r = 2;
     BSkipList() {
-        Block* block = new Block(INT_MIN, nullptr); // negative infinity block
+        Block* block = new Block(new Node(INT_MIN,nullptr), nullptr); // negative infinity block
         levels.push_back(block);
     }
 
@@ -62,19 +66,41 @@ public:
         srand(time(NULL)); // initialize random seed
         Block* current = levels[levels.size()-1];  // starting from first block in higest level
         std::stack<Block*> blocks;      // place for value at each level
-        Block* block = levels[levels.size()-1];  // keep track the place for value
+        Block* block;  // keep track the place for value
+        Node* prev;
         while(current){
+            bool found = false;
             // find a value greater than insert value
             for(unsigned int i = 0; i < current->vector.size(); i++) {
-                if(value >= current->vector[i]->value){ // find the place
+                if(value > current->vector[i]->value){ // go to next node
+                    prev = current->vector[i];
                     block = current;
+                }
+                else{    // find the place
+                    blocks.push(block);
+                    current = prev->down;
+                    found = true;
                     break;
                 }
             }
-            // keep looking in next block
-            current = current->next;
+            if(!found){
+                // keep looking in next block
+                if(current->next){
+                    current = current->next;
+                    // last in current block
+                    if(value < current->vector[0]->value){
+                        blocks.push(block);
+                        current = prev->down;
+                    }
+                }
+                else // last in this level
+                    blocks.push(current);
+                    current = prev->down;
+            }
         }
-        // reach the level 0, block is place for value
+        // building block from botton
+        block = blocks.top();
+        blocks.pop();
         for(unsigned int i = 0; i < block->vector.size(); i++) {
             if(block->vector[i]->value > value){ // in the middle of the vector
                 if(r % 2 == 0){ // tail
@@ -88,9 +114,14 @@ public:
                     for(unsigned int j = i; j < block->vector.size(); j++)
                         right.push_back(block->vector[j]);
                     block->vector.resize(i);
-                    Block* rightBlock = new Block(-1,nullptr);
-                    rightBlock->vector = right;
-                    block->next = new Block(value,rightBlock);
+                    Block* rightBlock = new Block(right,nullptr);
+                    block->next = new Block(new Node(value,nullptr),rightBlock);
+                    // new level
+                    if(blocks.empty()){
+                        Block* up = new Block(new Node(INT_MIN,block),nullptr);
+                        up->vector.push_back(new Node(value,block->next));
+                        levels.push_back(up);
+                    }
                 }
                 return;
             }
@@ -102,14 +133,25 @@ public:
         }
         else{ //head
             r++;
-            Block* newBlock = new Block(value,block->next);
+            Block* newBlock = new Block(new Node(value,nullptr),block->next);
             block->next = newBlock;
+            // new level
+            if(blocks.empty()){
+                Block* up = new Block(new Node(INT_MIN,block),nullptr);
+                up->vector.push_back(new Node(value,newBlock));
+                levels.push_back(up);
+            }
+            
         }
     }
 
     void print(){
-        for(unsigned int i = 0; i < levels.size(); i++) {
-            levels[i]->print();
+        for(unsigned int i = levels.size() - 1; i >= 0 ; i--) {
+            Block* current = levels[i];
+            while(current){
+                current->print();
+                current = current->next;
+            }
             std::cout << std::endl;
         }
     }
@@ -118,14 +160,9 @@ public:
 int main() {
     BSkipList list;
     list.insert(1);
-    list.insert(5);
-    list.insert(2);
+    list.insert(10);
     list.insert(3);
     list.insert(4);
-    list.insert(4);
-    list.insert(5);
-    list.insert(10);
-    list.insert(-1);
     list.print();
     return 0;
 }
