@@ -2,7 +2,8 @@
 #include <vector>
 #include <stack>
 #include <random>
-#include<time.h> 
+#include <limits.h>
+#include <time.h> 
 
 class Block;
 
@@ -50,6 +51,45 @@ public:
 class BSkipList {
 private:
     std::vector<Block*> levels; // Vector of head blocks from each level
+    std::stack<Block*> getBlockStack(int value){
+        Block* current = levels[levels.size()-1];  // starting from first block in higest level
+        std::stack<Block*> blocks;      // place for value at each level
+        Block* block = current;  // keep track the place for value
+        Node* prev;
+        while(current){
+            bool found = false;
+            // find a value greater than insert value
+            for(unsigned int i = 0; i < current->vector.size(); i++) {
+                if(value > current->vector[i]->value){ // go to next node
+                    prev = current->vector[i];
+                }
+                else{    // find the place
+                    blocks.push(block);
+                    current = prev->down;
+                    block = current;
+                    found = true;
+                    break;
+                }
+            }
+            if(!found){
+                // keep looking in next block
+                if(current->next){
+                    current = current->next;
+                    // last in current block
+                    if(value < current->vector[0]->value){
+                        blocks.push(block);
+                        current = prev->down;
+                    }
+
+                }
+                else // last in this level
+                    blocks.push(current);
+                    current = prev->down;
+            }
+            block = current;
+        }
+        return blocks;
+    }
 public:
     int r = 2;
     BSkipList() {
@@ -64,84 +104,64 @@ public:
 
     void insert(int value) {
         srand(time(NULL)); // initialize random seed
-        Block* current = levels[levels.size()-1];  // starting from first block in higest level
-        std::stack<Block*> blocks;      // place for value at each level
-        Block* block;  // keep track the place for value
-        Node* prev;
-        while(current){
-            bool found = false;
-            // find a value greater than insert value
-            for(unsigned int i = 0; i < current->vector.size(); i++) {
-                if(value > current->vector[i]->value){ // go to next node
-                    prev = current->vector[i];
-                    block = current;
-                }
-                else{    // find the place
-                    blocks.push(block);
-                    current = prev->down;
-                    found = true;
-                    break;
-                }
-            }
-            if(!found){
-                // keep looking in next block
-                if(current->next){
-                    current = current->next;
-                    // last in current block
-                    if(value < current->vector[0]->value){
-                        blocks.push(block);
-                        current = prev->down;
+        std::stack<Block*> blocks = getBlockStack(value);
+        Block* lower = nullptr;
+        // building block from botton
+        while (!blocks.empty()){
+            bool inserted = false;
+            Block* block = blocks.top();
+            blocks.pop();
+            for(unsigned int i = 0; i < block->vector.size(); i++) {
+                if(block->vector[i]->value > value){ // in the middle of the vector
+                    if(rand() % 2 == 0){ // tail
+                        r++;
+                        block->vector.insert(block->vector.begin() + i, new Node(value,lower));
+                        return;
+                    }
+                    else{ // head
+                        r++;
+                        // split and shrink block
+                        std::vector<Node*> right;
+                        right.push_back(new Node(value,lower));
+                        for(unsigned int j = i; j < block->vector.size(); j++)
+                            right.push_back(block->vector[j]);
+                        block->vector.resize(i);
+                        Block* rightBlock = new Block(right,block->next);
+                        block->next = rightBlock;
+                        // new level
+                        if(blocks.empty()){
+                            Block* up = new Block(new Node(INT_MIN,block),nullptr);
+                            up->vector.push_back(new Node(value,block->next));
+                            levels.push_back(up);
+                        }
+                        inserted = true;
+                        lower = block->next;
+                        break;
                     }
                 }
-                else // last in this level
-                    blocks.push(current);
-                    current = prev->down;
             }
-        }
-        // building block from botton
-        block = blocks.top();
-        blocks.pop();
-        for(unsigned int i = 0; i < block->vector.size(); i++) {
-            if(block->vector[i]->value > value){ // in the middle of the vector
-                if(r % 2 == 0){ // tail
+            if (!inserted){
+                // at the end of the vector
+                if(rand() % 2 == 0){ // tail
                     r++;
-                    block->vector.insert(block->vector.begin() + i, new Node(value,nullptr));
+                    block->vector.push_back(new Node(value,lower));
+                    return;
                 }
-                else{ // head
+                else{ //head
                     r++;
-                    std::vector<Node*> right;
-                    // split and shrink block
-                    for(unsigned int j = i; j < block->vector.size(); j++)
-                        right.push_back(block->vector[j]);
-                    block->vector.resize(i);
-                    Block* rightBlock = new Block(right,nullptr);
-                    block->next = new Block(new Node(value,nullptr),rightBlock);
+                    Block* newBlock = new Block(new Node(value,lower),block->next);
+                    block->next = newBlock;
                     // new level
                     if(blocks.empty()){
                         Block* up = new Block(new Node(INT_MIN,block),nullptr);
-                        up->vector.push_back(new Node(value,block->next));
+                        up->vector.push_back(new Node(value,newBlock));
                         levels.push_back(up);
                     }
+                    lower = newBlock;
+
+                    
                 }
-                return;
             }
-        }
-        // at the end of the vector
-        if(r % 2 == 0){ // tail
-            r++;
-            block->vector.push_back(new Node(value,nullptr));
-        }
-        else{ //head
-            r++;
-            Block* newBlock = new Block(new Node(value,nullptr),block->next);
-            block->next = newBlock;
-            // new level
-            if(blocks.empty()){
-                Block* up = new Block(new Node(INT_MIN,block),nullptr);
-                up->vector.push_back(new Node(value,newBlock));
-                levels.push_back(up);
-            }
-            
         }
     }
 
@@ -162,7 +182,12 @@ int main() {
     list.insert(1);
     list.insert(10);
     list.insert(3);
-    list.insert(4);
+    list.insert(2);
+    list.insert(6);
+    list.insert(11);
+    list.insert(7);
+    list.insert(8);
+
     list.print();
     return 0;
 }
