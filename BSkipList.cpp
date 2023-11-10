@@ -175,7 +175,160 @@ public:
             std::cout << std::endl;
         }
     }
+        bool search(int key) {
+        std::vector<Node*>::iterator it;
+        Node* node;
+        Node* prev_node;
+
+        // for (int i = levels.size() - 1; i >= 0; i--) { 
+        // Block* block = levels[i];
+        Block* block = levels[levels.size() - 1];
+        while(block) {
+            for (it = block->vector.begin(); it != block->vector.end(); ++it) {
+                node = *it;
+                if(node->value < key){
+                    prev_node = node; 
+                    if(node==*std::prev(block->vector.end())){
+                        block = block->next;
+                        break;
+                    }
+                    else{continue;}
+                }
+                else if(node->value == key) {return true;}
+                else if (key < node->value){
+                    block = prev_node->down; 
+                    break;
+                } 
+                // else if (i == 0) {return false;}
+            }
+        }
+        // }
+        return false;
+    }
+
+    // std::vector<bool> range_query(int _start_key, int _end_key) {
+    //     int start_key = _start_key;
+    //     int end_key = _end_key;
+
+    //     std::vector<Node*>::iterator it;
+    //     std::vector<bool> output;
+    //     bool value = false;
+        
+    //     Node* node;
+    //     Node* prev_node;
+
+    //     //first find the start key value
+    //     Block* block = levels[levels.size() - 1];
+
+    //     while(true){
+    //         while(block) {
+    //             if(value){break;}
+                
+    //             for (it = block->vector.begin(); it != block->vector.end(); ++it) {
+    //                 node = *it;
+    //                 if(node->value < start_key){
+    //                     prev_node = node; 
+    //                     if(node==*std::prev(block->vector.end())){
+    //                         block = block->next;
+    //                         break;
+    //                     }
+    //                     else{continue;}
+    //                 }
+    //                 else if(node->value == start_key) { 
+    //                     value = true;
+    //                     break;
+    //                 }
+    //                 else if (start_key < node->value){
+    //                     block = prev_node->down; 
+    //                     break;
+    //                 } 
+    //             }
+    //         }
+    //         output.push_back(value);
+    //         start_key+=1;
+            
+    //         if(value){++it; break;}
+    //         //prevent when the first key is not found
+    //         //if the first key is not found set the next key is first key
+    //         else if(start_key == end_key){break;}
+    //     }
+
+    //     //propagates next node until the key is below than end_key
+    //     //if there is no more blocks the break the loop.
+    //     int cur_key = start_key;
+
+    //     while(block){ 
+    //         if(cur_key >= end_key) break;
+
+    //         if(it == block->vector.end()) {
+    //             block = block->next;
+    //             it = block->vector.begin();
+    //         }
+
+    //         node = *it;
+    //         if(node->value == cur_key){
+    //             value = true;
+    //             ++cur_key;
+    //             ++it;
+    //         }
+    //         else if(node->value > cur_key){
+    //             value = false;
+    //             ++cur_key;
+    //         }
+
+    //         else{
+    //             value = false;
+    //             ++it;
+    //         }
+
+    //         output.push_back(value);
+    //     }
+    //     return output;
+    // }
+
+    std::vector<bool> range_query(int start_key, int end_key) {
+        std::vector<bool> output;
+        for (int key = start_key; key < end_key; key++) {
+            int value = search(key);
+            if (value != -1) {
+                output.push_back(value);
+            }
+        }
+        return output;
+    }
 };
+
+
+void test_search(BSkipList list){
+    //Test Search
+    std::cout << "==========================" << std::endl;
+    std::cout << "Test for search" << std::endl;
+    std::cout << "==========================" << std::endl;
+    std::cout << "Search 1: " << std::boolalpha << list.search(1) << std::endl;
+    std::cout << "Search 3: " << std::boolalpha << list.search(3) << std::endl;
+    std::cout << "Search 4: " << std::boolalpha << list.search(4) << std::endl;
+    std::cout << "Search 10: " << std::boolalpha << list.search(10) << std::endl;
+    std::cout << "Search 5: " << std::boolalpha << list.search(5) << std::endl;
+    std::cout << "Search 14: " << std::boolalpha << list.search(5) << std::endl;
+    std::cout << "Search 2: " << std::boolalpha << list.search(5) << std::endl;
+}
+
+void test_range_query(BSkipList list, int start, int end){    
+    //Test Range Query
+    std::vector<bool> rq_output = list.range_query(start, end);
+    std::vector<bool>::iterator it;
+    int i;
+
+    std::cout << "==========================" << std::endl;
+    std::cout << "Test for range search from " << start << " to " << end << std::endl;
+    std::cout << "==========================" << std::endl;
+
+    for(it=rq_output.begin(), i = start; it!=rq_output.end() && i < end; it++, i++){
+        std::cout << "Search " << i << ": " << std::boolalpha << *it << std::endl;
+    }
+}
+
+
 
 int main() {
     BSkipList list;
@@ -188,7 +341,8 @@ int main() {
     list.insert(7);
     list.insert(8);
     list.insert(-1);
-
+    std::cout<< list.search(-1)<<std::endl;
+    std::cout<< list.search(-2)<<std::endl;
 
     list.print();
     return 0;
