@@ -44,7 +44,7 @@ public:
                 std::cout<<"("<<vector[i]->down->vector[0]->value <<")";
             std::cout<< " ";
         }
-        std::cout << "|";
+        std::cout << "| ";
     }
 };
 
@@ -91,7 +91,7 @@ private:
         return blocks;
     }
 public:
-    int r = 2;
+    int r = 1;
     BSkipList() {
         Block* block = new Block(new Node(INT_MIN,nullptr), nullptr); // negative infinity block
         levels.push_back(block);
@@ -113,8 +113,8 @@ public:
             blocks.pop();
             for(unsigned int i = 0; i < block->vector.size(); i++) {
                 if(block->vector[i]->value > value){ // in the middle of the vector
-                    if(rand() % 2 == 0){ // tail
-                        r++;
+                    if(r % 2 == 0){ // tail
+                        r = r +rand();
                         block->vector.insert(block->vector.begin() + i, new Node(value,lower));
                         return;
                     }
@@ -142,13 +142,13 @@ public:
             }
             if (!inserted){
                 // at the end of the vector
-                if(rand() % 2 == 0){ // tail
-                    r++;
+                if(r % 2 == 0){ // tail
+                    r = r+1;
                     block->vector.push_back(new Node(value,lower));
                     return;
                 }
                 else{ //head
-                    r++;
+                    r = r + rand();
                     Block* newBlock = new Block(new Node(value,lower),block->next);
                     block->next = newBlock;
                     // new level
@@ -187,6 +187,8 @@ int main() {
     list.insert(11);
     list.insert(7);
     list.insert(8);
+    list.insert(-1);
+
 
     list.print();
     return 0;
