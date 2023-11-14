@@ -108,6 +108,11 @@ private:
 public:
     int r = 1;
     const float P_FACTOR = 0.25;
+    // const int MAX_LEVEL = 32;
+    // const float P_FACTOR = 0.25;
+    // static std::random_device rd; // obtain a random number from hardware
+    // static std::mt19937 gen(rand()); // seed the generator
+    // static std::uniform_real_distribution<> distr(0, 1); // define the range
     BSkipList()
     {
         Block *block = new Block(new Node(INT_MIN, nullptr), nullptr); // negative infinity block
