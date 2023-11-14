@@ -107,6 +107,7 @@ private:
 
 public:
     int r = 1;
+    const float P_FACTOR = 0.25;
     BSkipList()
     {
         Block *block = new Block(new Node(INT_MIN, nullptr), nullptr); // negative infinity block
@@ -134,9 +135,10 @@ public:
             {
                 if (block->vector[i]->value > value)
                 { // in the middle of the vector
-                    if (r % 2 == 0)
+                    // (static_cast<float>(rand()) / RAND_MAX) < P_FACTOR)
+                    if ((static_cast<float>(rand()) / RAND_MAX) < P_FACTOR)
                     { // tail
-                        r = r + rand();
+                        //r = r + rand();
                         block->vector.insert(block->vector.begin() + i, new Node(value, lower));
                         return;
                     }
@@ -167,7 +169,7 @@ public:
             if (!inserted)
             {
                 // at the end of the vector
-                if (r % 2 == 0)
+                if ((static_cast<float>(rand()) / RAND_MAX) < P_FACTOR)
                 { // tail
                     r = r + 1;
                     block->vector.push_back(new Node(value, lower));
@@ -270,6 +272,29 @@ public:
                     }
                 }
             }
+        }
+    }
+
+    void print_list(){
+        Block* curr;
+        for (int i = levels.size() - 1; i >= 0; i--)
+        {
+            Block *pre = nullptr;
+            curr = levels[i];
+            while (curr)
+            {
+                for (int j = 0; j < curr->vector.size(); j++)
+                {
+
+                    cout << curr->vector[j]->value << " ";
+                    if(curr->vector[j]->down){
+                        cout << "(" << curr->vector[j]->down->vector[0]->value << ")";
+                    }
+                }
+                curr = curr->next;
+                cout << "|";
+            }
+            cout << " " << endl;
         }
     }
 
@@ -387,14 +412,14 @@ int main()
     list.insert(6);
     list.insert(11);
     list.insert(7);
+    list.print_list();
     list.remove(7);
-    
+    cout << "=========="<<endl;
     // list.insert(8);
     // list.insert(-1);
     // std::cout << list.search(-1) << std::endl;
     // std::cout << list.search(-2) << std::endl;
     // std::cout << list.search(11) << std::endl;
-    list.print();
-    list.print();
+    list.print_list();
     return 0;
 }
