@@ -107,6 +107,11 @@ private:
 
 public:
     int r = 1;
+    // const int MAX_LEVEL = 32;
+    // const float P_FACTOR = 0.25;
+    // static std::random_device rd; // obtain a random number from hardware
+    // static std::mt19937 gen(rand()); // seed the generator
+    // static std::uniform_real_distribution<> distr(0, 1); // define the range
     BSkipList()
     {
         Block *block = new Block(new Node(INT_MIN, nullptr), nullptr); // negative infinity block
@@ -273,6 +278,26 @@ public:
         }
     }
 
+    void print_list(){
+        Block* curr;
+        for (int i = levels.size() - 1; i >= 0; i--)
+        {
+            Block *pre = nullptr;
+            curr = levels[i];
+            while (curr)
+            {
+                for (int j = 0; j < curr->vector.size(); j++)
+                {
+                    
+                    cout << curr->vector[j]->value << " ";
+                }
+                curr = curr->next;
+                cout << "|";
+            }
+            cout << " " << endl;
+        }
+    }
+
     void print()
     {
         for (unsigned int i = levels.size() - 1; i >= 0; i--)
@@ -388,13 +413,12 @@ int main()
     list.insert(11);
     list.insert(7);
     list.remove(7);
-    
+    list.print_list();
     // list.insert(8);
     // list.insert(-1);
     // std::cout << list.search(-1) << std::endl;
     // std::cout << list.search(-2) << std::endl;
     // std::cout << list.search(11) << std::endl;
-    list.print();
-    list.print();
+    //list.print();
     return 0;
 }
