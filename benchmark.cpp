@@ -48,10 +48,14 @@ typedef struct thread_args {
     uint * items;
     double * duration;
 
-    uint * data;//data for query or inserting
+    data_entry * data;//data for query or inserting
     uint n_data;//num of entries
 } thread_args;
 
+typedef struct data_entry{
+    uint op_code; //op_code = 0 for query, 1 for insert, 2 for delete
+    uint value;
+} data_entry;
 
 
 //helpers for stats
@@ -133,7 +137,7 @@ void *reader_thread_routine(void *args) {
     uint * items = my_args->items;
 
     uint n_data = my_args->n_data;
-    uint * data = my_args->data;
+    data_entry * data = my_args->data;
 
     int cpuid = sched_getcpu();
 
@@ -150,8 +154,12 @@ void *reader_thread_routine(void *args) {
 
 
         for (uint i = 0; i < n_data; i++){
-
-            bskiplist.query(data[i]);
+            if(data[i]->op_code == 0){
+                bskiplist.query(data[i]->value);
+            }
+            else{
+                perror("Reader thread: invalid op_code");
+            }
             // if (items[i]+1 != items[i+1]){
             //     perror("Panic: Readers and Writers are both in lock.");
             // }
@@ -186,7 +194,7 @@ void *writer_thread_routine(void *args) {
     uint tid = my_args->thread_id;
 
     uint n_data = my_args->n_data;
-    uint * data = my_args->data;
+    data_entry * data = my_args->data;
 
 
     uint * items = my_args->items;
@@ -209,12 +217,20 @@ void *writer_thread_routine(void *args) {
 
         for (uint i = 0; i < n_data; i++){
 
+            if (data[i]->op_code == 1){
+                bskiplist.insert(data[i]->value);
+            }
+            else if (data[i]->op_code == 2){
+                bskiplist.delete(data[i]->value);
+            }
+            else{
+                perror("Writer thread: invalid op_code");
+            }
             // if (items[i] != offset + i){
             //     perror("Panic: Multiple writers in lock.");
             // }
 
             // items[i] += (tid+1);
-            bskiplist.insert(data[i]);
         }
 
         write_unlock(lock);
@@ -230,17 +246,31 @@ void *writer_thread_routine(void *args) {
     return NULL;
 }
 
-void parse_data_from_txt(std:string fname, uint * data){
+void parse_data_from_txt(std:string fname, data_entry * data){
     std::ifstream file(fname);
     if (!file.is_open()) {
         std::cerr << "Error opening file: " << fname << std::endl;
         return;
     }
 
-    unsigned int num;
+    std::string operation;
+    unsigned int value;
     size_t index = 0;
-    while (file >> num) {
-        data[index++] = num;
+
+    while (file >> operation >> value) {
+        if (operation == "query") {
+            data[index].op_code = 0;
+        } else if (operation == "insert") {
+            data[index].op_code = 1;
+        } else if (operation == "delete") {
+            data[index].op_code = 2;
+        } else {
+            perror("Invalid operation");
+            continue;
+        }
+
+        data[index].value = value;
+        index++;
     }
 
     file.close();
@@ -326,7 +356,7 @@ int main(int argc, char **argv) {
         reader_args[i].duration = reader_output + (i*niters);
 
         reader_args[i].n_data = n_data;
-        reader_args[i].data = (uint *) malloc(n_data*sizeof(uint));
+        reader_args[i].data = (data_entry *) malloc(n_data*sizeof(data_entry));
         parse_data_from_txt("readers_"+std::to_string(i)+".txt", reader_args[i].data);
     }
 
