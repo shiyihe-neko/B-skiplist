@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <sched.h>
 #include <math.h>
+#include <string>
 
 
 #include "lock.h"
@@ -46,6 +47,9 @@ typedef struct thread_args {
     uint thread_id; 
     uint * items;
     double * duration;
+
+    uint * data;//data for query or inserting
+    uint n_data;//num of entries
 } thread_args;
 
 
@@ -124,13 +128,17 @@ void *reader_thread_routine(void *args) {
     //read in args and determine cpuid
     thread_args * my_args = (thread_args *) args;
     ReaderWriterLock * lock = my_args->rwlock;
-    uint niters = my_args->niters;
+    // uint niters = my_args->niters;
     uint nitems = my_args->nitems;
     uint * items = my_args->items;
+
+    uint n_data = my_args->n_data;
+    uint * data = my_args->data;
+
     int cpuid = sched_getcpu();
 
 
-    for (uint iter = 0; iter < niters; iter++){
+    for (uint iter = 0; iter < n_iter; iter++){
 
         //timer measures delay in acquiring lock
         // write duration to output as double.
@@ -141,11 +149,12 @@ void *reader_thread_routine(void *args) {
         std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
 
 
-        for (uint i = 0; i < nitems-1; i++){
+        for (uint i = 0; i < n_data; i++){
 
-            if (items[i]+1 != items[i+1]){
-                perror("Panic: Readers and Writers are both in lock.");
-            }
+            bskiplist.query(data[i]);
+            // if (items[i]+1 != items[i+1]){
+            //     perror("Panic: Readers and Writers are both in lock.");
+            // }
 
         }
 
@@ -176,6 +185,10 @@ void *writer_thread_routine(void *args) {
     uint nitems = my_args->nitems;
     uint tid = my_args->thread_id;
 
+    uint n_data = my_args->n_data;
+    uint * data = my_args->data;
+
+
     uint * items = my_args->items;
   
     //not needed for writers
@@ -194,14 +207,14 @@ void *writer_thread_routine(void *args) {
         //if this deviates, that means 2+ writers are in the lock.
         uint offset = items[0];
 
-        for (uint i = 0; i < nitems; i++){
+        for (uint i = 0; i < n_data; i++){
 
-            if (items[i] != offset + i){
-                perror("Panic: Multiple writers in lock.");
-            }
+            // if (items[i] != offset + i){
+            //     perror("Panic: Multiple writers in lock.");
+            // }
 
-            items[i] += (tid+1);
-
+            // items[i] += (tid+1);
+            bskiplist.insert(data[i]);
         }
 
         write_unlock(lock);
@@ -217,9 +230,24 @@ void *writer_thread_routine(void *args) {
     return NULL;
 }
 
+void parse_data_from_txt(std:string fname, uint * data){
+    std::ifstream file(fname);
+    if (!file.is_open()) {
+        std::cerr << "Error opening file: " << fname << std::endl;
+        return;
+    }
+
+    unsigned int num;
+    size_t index = 0;
+    while (file >> num) {
+        data[index++] = num;
+    }
+
+    file.close();
+}
 
 int main(int argc, char **argv) {
-    if (argc != 5) {
+    if (argc != 6) {
         std::cout << "Usage: ./benchmark [num reader threads][num writer threads][num items][num iterations]\n";
         return 1;
     }
@@ -230,15 +258,17 @@ int main(int argc, char **argv) {
     uint nwriters = atoi(argv[2]);
     uint nitems = atoi(argv[3]);
     uint niters = atoi(argv[4]);
+    uint n_data = atoi(argv[5]);
 
 
-    if (nreaders == 0 || nwriters == 0 || nitems == 0 || niters == 0){
+
+    if (nreaders == 0 || nwriters == 0 || nitems == 0 || niters == 0 || n_data == 0){
         perror("All arguments must be > 0");
         return -1;
     }
 
 
-    printf("Running benchmark with %u readers, %u writers, %u items, %u iterations\n", nreaders, nwriters, nitems, niters);
+    printf("Running benchmark with %u readers, %u writers, %u items, %u iterations, %u data entries\n", nreaders, nwriters, nitems, niters, n_data);
 
 
     //first, malloc the lock and initialize
@@ -295,6 +325,9 @@ int main(int argc, char **argv) {
         reader_args[i].items = items;
         reader_args[i].duration = reader_output + (i*niters);
 
+        reader_args[i].n_data = n_data;
+        reader_args[i].data = (uint *) malloc(n_data*sizeof(uint));
+        parse_data_from_txt("readers_"+std::to_string(i)+".txt", reader_args[i].data);
     }
 
     pthread_t * readers = (pthread_t *) malloc(nreaders*sizeof(pthread_t));
@@ -333,7 +366,10 @@ int main(int argc, char **argv) {
        writer_args[i].thread_id = i;
        writer_args[i].items = items;
        writer_args[i].duration = writer_output + (i*niters);
-
+       
+       writer_args[i].n_data = n_data;
+       writer_args[i].data = (uint *) malloc(n_data*sizeof(uint));
+       parse_data_from_txt("writers"+std::to_string(i)+".txt", writer_args[i].data);
     }
 
     pthread_t * writers = (pthread_t *) malloc(nwriters*sizeof(pthread_t));
@@ -411,6 +447,14 @@ int main(int argc, char **argv) {
 
 
     free(items);
+    
+    for (uint i = 0; i < nreaders; i++){
+        free(reader_args[i].data);
+    }
+    for (uint i = 0; i < nwriters; i++){
+        free(writer_args[i].data);
+    }
+    
 
     return 0;
 }
